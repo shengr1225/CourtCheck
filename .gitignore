@@ -41,3 +41,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# curl cookies / local auth artifacts
+cookies.txt
