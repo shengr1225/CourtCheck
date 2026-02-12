@@ -1,7 +1,15 @@
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { Button, Text, TextInput, View, ActivityIndicator } from "react-native";
+import {
+    AuthInput,
+    AuthPrimaryButton,
+    AuthScreenLayout,
+    AuthSubtitle,
+    AuthTitle,
+    authFormStyles,
+} from "@/components/ui/auth";
 import { useAuthContext } from "@/context/AuthContext";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
+import { Text, View } from "react-native";
 
 export default function OTP() {
     const router = useRouter();
@@ -12,7 +20,7 @@ export default function OTP() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const handleVerify = async () => {
+    const handleVerifyOTP = async () => {
         if (code.length !== 6) {
             setError("Enter the 6-digit code");
             return;
@@ -22,8 +30,13 @@ export default function OTP() {
         setError("");
 
         try {
-            await verifyOtp(email!, code);
-            router.replace("/(auth)/name");
+            const nextStep = await verifyOtp(email, code);
+            const goToName = __DEV__ ? true : nextStep === "name";
+            if (goToName) {
+                router.replace("/(auth)/name");
+            } else {
+                router.replace("/(main)");
+            }
         } catch (err: any) {
             setError(err.message || "Invalid code");
         } finally {
@@ -32,26 +45,37 @@ export default function OTP() {
     };
 
     return (
-        <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
-            <Text>Enter the code sent to your email</Text>
-
-            <TextInput
-                value={code}
-                onChangeText={setCode}
-                keyboardType="number-pad"
-                maxLength={6}
-                style={{
-                    borderWidth: 1,
-                    padding: 12,
-                    marginVertical: 12,
-                }}
-            />
-
-            {error ? <Text style={{ marginBottom: 8 }}>{error}</Text> : null}
-
-            <Button title="Verify" onPress={handleVerify} disabled={loading} />
-
-            {loading && <ActivityIndicator style={{ marginTop: 12 }} />}
-        </View>
+        <AuthScreenLayout>
+            <View style={authFormStyles.fill}>
+                <View style={authFormStyles.formBlock}>
+                    <AuthTitle>Enter the code</AuthTitle>
+                    <AuthSubtitle>
+                        To sign in, enter the code we just sent to your email
+                    </AuthSubtitle>
+                    <AuthInput
+                        placeholder="000000"
+                        value={code}
+                        onChangeText={(text) => {
+                            setCode(text);
+                            setError("");
+                        }}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        editable={!loading}
+                        error={!!error}
+                    />
+                    {error ? (
+                        <Text style={authFormStyles.errorText}>{error}</Text>
+                    ) : null}
+                </View>
+                <AuthPrimaryButton
+                    onPress={handleVerifyOTP}
+                    disabled={loading || code.length !== 6}
+                    loading={loading}
+                >
+                    Continue
+                </AuthPrimaryButton>
+            </View>
+        </AuthScreenLayout>
     );
 }
