@@ -1,6 +1,6 @@
-import { useEffect } from "react";
 import { Redirect } from "expo-router";
-import { View, ActivityIndicator } from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Index() {

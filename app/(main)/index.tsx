@@ -1,6 +1,6 @@
-import { Button, View, Text } from "react-native";
 import { useAuthContext } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
+import { Button, Text, View } from "react-native";
 
 export default function Main() {
     const { logout } = useAuthContext();
@@ -21,10 +21,12 @@ export default function Main() {
             <Text>Main App</Text>
 
             {__DEV__ && (
-                <Button
-                    title="Dev Logout"
-                    onPress={handleLogout}
-                />
+                <>
+                    <Button
+                        title="Dev Logout"
+                        onPress={handleLogout}
+                    />
+                </>
             )}
         </View>
     );
