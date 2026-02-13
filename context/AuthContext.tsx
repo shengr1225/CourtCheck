@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api";
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useState } from "react";
 
 type User = {
     userId: string;
@@ -10,13 +10,15 @@ type User = {
     checkinCount?: number;
 };
 
+type NextAuthStep = "name" | "main";
+
 type AuthContextType = {
-    user: User | null;
-    loading: boolean;
-    requestOtp: (email: string) => Promise<void>;
-    verifyOtp: (email: string, code: string) => Promise<"name" | "main">;
-    getCurrentUser: () => Promise<void>;
-    logout: () => Promise<void>;
+  user: User | null;
+  loading: boolean;
+  requestOtp: (email: string) => Promise<void>;
+  verifyOtp: (email: string, code: string) => Promise<NextAuthStep>;
+  getCurrentUser: () => Promise<User | null>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -25,18 +27,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-    async function requestOtp(email: string) {
-        await apiFetch("/api/auth/request", {
-            method: "POST",
-            body: JSON.stringify({ email }),
-        });
-    }
+  // Auth API Calls
+  const requestOtp = useCallback(async (email: string) => {
+    await apiFetch("/api/auth/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }, []);
 
-    async function verifyOtp(email: string, code: string): Promise<"name" | "main"> {
-        const data = await apiFetch("/api/auth/verify", {
-            method: "POST",
-            body: JSON.stringify({ email, code }),
-        });
+  async function verifyOtp(email: string, code: string): Promise<NextAuthStep> {
+    const data = await apiFetch("/api/auth/verify", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
 
         if (data.ok && data.user) {
             setUser(data.user);
@@ -46,23 +49,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
-    async function getCurrentUser() {
-        try {
-            const data = await apiFetch("/api/auth/me");
-            setUser(data.user);
-        } catch {
-            setUser(null);
-        } finally {
-            setLoading(false);
-        }
+  const getCurrentUser = useCallback(async (): Promise<User | null> => {
+    try {
+      const data = await apiFetch("/api/auth/me");
+      setUser(data.user);
+      return data.user ?? null;
+    } catch {
+      setUser(null);
+      return null;
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    async function logout() {
-        await apiFetch("/api/auth/logout", {
-            method: "POST",
-        });
-        setUser(null);
-    }
+  const logout = useCallback(async () => {
+    await apiFetch("/api/auth/logout", {
+      method: "POST",
+    });
+    setUser(null);
+  }, []);
 
     return (
         <AuthContext.Provider

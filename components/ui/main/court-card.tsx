@@ -1,9 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { APP_COLORS } from "./theme";
 import { Card } from "./card";
-import { COURT_STATUS, MAIN_RADII } from "./theme";
 import type { CourtStatusKey } from "./court-list-item";
+import { APP_COLORS, COURT_STATUS, MAIN_RADII } from "./theme";
 
 /** "816 Brookside Dr, Danville, CA, 94526, USA" → "816 Brookside Dr, Danville" */
 export function formatLocationShort(addressLine: string): string {
@@ -159,4 +158,3 @@ export function CourtCard({
         </Card>
     );
 }
-

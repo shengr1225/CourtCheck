@@ -42,13 +42,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: APP_COLORS.title,
   },
-  devLogout: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  devLogoutText: {
-    fontSize: 14,
-    color: APP_COLORS.primary,
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     flex: 1,
@@ -86,7 +85,6 @@ const styles = StyleSheet.create({
 });
 
 export default function Main() {
-  const { logout } = useAuthContext();
   const router = useRouter();
   const [courts, setCourts] = useState<ApiCourt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,6 +114,91 @@ export default function Main() {
                             <Ionicons name="menu" size={24} color="#000000" />
                         </Pressable>
                     }
+      if (status !== "granted" && currentPermission.canAskAgain) {
+        const requestedPermission =
+          await Location.requestForegroundPermissionsAsync();
+        status = requestedPermission.status;
+      }
+
+      if (status !== "granted") return undefined;
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      return {
+        lat: location.coords.latitude,
+        long: location.coords.longitude,
+      };
+    } catch {
+      return undefined;
+    }
+  }, []);
+
+  const loadCourts = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const coordinates = await getUserCoordinates();
+        const list = await listCourts(coordinates);
+        setCourts(list);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load courts");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [getUserCoordinates]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCourts(courts.length === 0);
+    }, [loadCourts, courts.length])
+  );
+
+  return (
+    <MainScreenLayout>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>CourtCheck</Text>
+        <Pressable
+          onPress={() => router.push("/(main)/menu")}
+          style={styles.menuButton}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Open menu"
+        >
+          <MaterialCommunityIcons name="menu" size={32} color="#000000" />
+        </Pressable>
+      </View>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <HomePromoCard />
+
+        <View>
+          <Text style={styles.sectionTitle}>Courts nearby</Text>
+          {error && (
+            <View style={styles.error}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+          {loading ? (
+            <View style={styles.loading}>
+              <ActivityIndicator size="large" color={APP_COLORS.primary} />
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {courts.map((court) => (
+                <CourtCard
+                  key={court.id}
+                  name={court.name}
+                  status={apiStatusToApp(court.status)}
+                  onPress={() => router.push(`/(main)/court/${court.id}`)}
                 />
                 <ScrollView
                     style={styles.scroll}
