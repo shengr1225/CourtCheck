@@ -1,12 +1,12 @@
 import { ReactNode } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { APP_COLORS } from "./theme";
+import { HOME_BACKGROUND } from "./theme";
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: APP_COLORS.background,
+        backgroundColor: HOME_BACKGROUND,
     },
     content: {
         flex: 1,

@@ -1,13 +1,18 @@
 import {
-  APP_COLORS,
-  CourtCard,
-  HomePromoCard,
-  MAIN_SPACING,
-  MainScreenLayout,
+    APP_COLORS,
+    CourtCard,
+    HeaderLogo,
+    HomePromoCard,
+    MainHeader,
+    MainScreenLayout,
+    SectionCard,
+    SCROLL_CONTENT,
 } from "@/components/ui/main";
+import { MAIN_RADII, SECTION_BACKGROUND } from "@/components/ui/main/theme";
+import { useAuthContext } from "@/context/AuthContext";
 import type { ApiCourt } from "@/lib/courts";
 import { apiStatusToApp, listCourts } from "@/lib/courts";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
@@ -88,10 +93,27 @@ export default function Main() {
   const getUserCoordinates = useCallback(async () => {
     if (Platform.OS === "web") return undefined;
 
-    try {
-      const currentPermission = await Location.getForegroundPermissionsAsync();
-      let status = currentPermission.status;
+    useFocusEffect(
+        useCallback(() => {
+            loadCourts(courts.length === 0);
+            getCurrentUser();
+        }, [loadCourts, courts.length, getCurrentUser])
+    );
 
+    return (
+        <MainScreenLayout>
+            <View style={styles.screen}>
+                <MainHeader
+                    left={<HeaderLogo />}
+                    right={
+                        <Pressable
+                            onPress={() => router.push("/(main)/menu")}
+                            style={styles.headerRight}
+                            hitSlop={8}
+                        >
+                            <Ionicons name="menu" size={24} color="#000000" />
+                        </Pressable>
+                    }
       if (status !== "granted" && currentPermission.canAskAgain) {
         const requestedPermission =
           await Location.requestForegroundPermissionsAsync();
@@ -178,11 +200,42 @@ export default function Main() {
                   status={apiStatusToApp(court.status)}
                   onPress={() => router.push(`/(main)/court/${court.id}`)}
                 />
-              ))}
+                <ScrollView
+                    style={styles.scroll}
+                    contentContainerStyle={SCROLL_CONTENT}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <HomePromoCard checkinCount={user?.checkinCount} />
+                    <SectionCard>
+                        <View style={styles.courtsSection}>
+                            <Text style={styles.sectionTitle}>Available Courts</Text>
+                            {error ? (
+                                <View style={styles.error}>
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                            ) : null}
+                            {loading ? (
+                                <View style={styles.loading}>
+                                    <ActivityIndicator size="large" color={APP_COLORS.primary} />
+                                </View>
+                            ) : (
+                                <View style={styles.list}>
+                                    {courts.map((court) => (
+                                        <CourtCard
+                                            key={court.id}
+                                            name={court.name}
+                                            status={apiStatusToApp(court.status)}
+                                            onPress={() => router.push(`/(main)/court/${court.id}`)}
+                                            addressLine={court.addressLine}
+                                            lastUpdatedAt={court.lastUpdatedAt}
+                                        />
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    </SectionCard>
+                </ScrollView>
             </View>
-          )}
-        </View>
-      </ScrollView>
-    </MainScreenLayout>
-  );
+        </MainScreenLayout>
+    );
 }

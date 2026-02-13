@@ -2,10 +2,12 @@ import { apiFetch } from "@/lib/api";
 import React, { createContext, useCallback, useContext, useState } from "react";
 
 type User = {
-  userId: string;
-  email: string;
-  name?: string;
-  stripeCustomerId?: string | null;
+    userId: string;
+    email: string;
+    name?: string;
+    stripeCustomerId?: string | null;
+    /** Monthly check-in count toward "20 check-ins = free one month" (from GET /api/auth/me) */
+    checkinCount?: number;
 };
 
 type NextAuthStep = "name" | "main";
@@ -39,14 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({ email, code }),
     });
 
-    if (data.ok && data.user) {
-      setUser(data.user);
-      // Decide next step based on whether user has a name
-      return data.user.name ? "main" : "name";
-    } else {
-      throw new Error(data.error || "Verification failed");
+        if (data.ok && data.user) {
+            setUser(data.user);
+            return data.user.name ? "main" : "name";
+        } else {
+            throw new Error(data.error || "Verification failed");
+        }
     }
-  }
 
   const getCurrentUser = useCallback(async (): Promise<User | null> => {
     try {
@@ -68,17 +69,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{ user, loading, requestOtp, verifyOtp, getCurrentUser, logout }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider
+            value={{ user, loading, requestOtp, verifyOtp, getCurrentUser, logout }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
 }
 
 export function useAuthContext() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("AuthContext missing");
-  return ctx;
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error("AuthContext missing");
+    return ctx;
 }
