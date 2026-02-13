@@ -1,16 +1,29 @@
 import { BackButton } from "@/components/ui/auth/back-button";
+import { formatTimePast } from "@/components/ui/main/court-card";
 import {
-    Card,
     MainScreenLayout,
+    MainHeader,
+    SectionCard,
+    SCROLL_CONTENT,
     APP_COLORS,
-    MAIN_SPACING,
     COURT_STATUS,
-    MAIN_RADII,
 } from "@/components/ui/main";
 import { listCourts, apiStatusToApp } from "@/lib/courts";
 import type { ApiCourt, ApiCheckinWithUser } from "@/lib/courts";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+
+const HOME_BG = "#EBF3FF";
 
 function parseAddedCheckin(param: string | undefined): ApiCheckinWithUser | null {
     if (!param?.trim()) return null;
@@ -22,145 +35,114 @@ function parseAddedCheckin(param: string | undefined): ApiCheckinWithUser | null
     }
     return null;
 }
-import {
-    ActivityIndicator,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
 
-function formatLastUpdated(iso: string): string {
-    try {
-        const d = new Date(iso);
-        const now = new Date();
-        const sameDay = d.toDateString() === now.toDateString();
-        if (sameDay) {
-            return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-        }
-        return d.toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-        });
-    } catch {
-        return iso;
-    }
-}
-
-function formatCheckinTime(iso: string): string {
-    try {
-        const d = new Date(iso);
-        return d.toLocaleString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-        });
-    } catch {
-        return iso;
-    }
-}
+const INFO_CARD_STYLE = { padding: 16, gap: 16 };
 
 const styles = StyleSheet.create({
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: MAIN_SPACING.headerPaddingHorizontal,
-        paddingVertical: MAIN_SPACING.headerPaddingVertical,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: "#E0E0E0",
-    },
-    headerTitle: {
+    screen: {
         flex: 1,
-        fontSize: 18,
-        fontWeight: "600",
-        color: APP_COLORS.title,
+        backgroundColor: HOME_BG,
     },
-    content: {
+    scroll: {
         flex: 1,
-        paddingHorizontal: MAIN_SPACING.contentPaddingHorizontal,
-        paddingBottom: MAIN_SPACING.contentPaddingBottom,
-    },
-    scrollContent: {
-        paddingTop: MAIN_SPACING.sectionGap,
-        gap: MAIN_SPACING.sectionGap,
-        paddingBottom: 32,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: APP_COLORS.title,
-        marginBottom: 8,
-    },
-    lastCard: {
-        gap: 10,
     },
     courtPhoto: {
         width: "100%",
-        height: 160,
-        borderRadius: MAIN_RADII.card,
-        backgroundColor: "#E8E8E8",
+        height: 254,
+        borderRadius: 0,
+        backgroundColor: "#D9D9D9",
     },
-    lastMeta: {
+    /** Row: status pill + clock + time */
+    statusRow: {
         flexDirection: "row",
+        justifyContent: "center",
         alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: 8,
+        gap: 16,
     },
-    lastCrowd: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: MAIN_RADII.statusPill,
-    },
-    lastCrowdText: {
-        fontSize: 14,
-        fontWeight: "600",
-    },
-    lastTime: {
-        fontSize: 14,
-        color: "#686D84",
-    },
-    previousList: {
-        gap: 8,
-    },
-    previousRow: {
+    pill: {
         flexDirection: "row",
+        justifyContent: "center",
         alignItems: "center",
-        justifyContent: "space-between",
-        paddingVertical: 12,
-        paddingHorizontal: 14,
-        backgroundColor: APP_COLORS.background,
-        borderRadius: MAIN_RADII.card,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 16,
     },
-    previousName: {
-        fontSize: 15,
-        fontWeight: "500",
-        color: APP_COLORS.title,
-    },
-    previousTime: {
-        fontSize: 14,
-        color: "#686D84",
-    },
-    checkInButton: {
-        marginTop: 8,
-        paddingVertical: 14,
-        borderRadius: MAIN_RADII.card,
-        backgroundColor: APP_COLORS.primary,
-        alignItems: "center",
-    },
-    checkInButtonText: {
+    pillText: {
         fontSize: 16,
         fontWeight: "600",
-        color: APP_COLORS.primaryText,
+        lineHeight: 19,
+        letterSpacing: -0.408,
+    },
+    timeRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+    },
+    timeText: {
+        fontSize: 16,
+        fontWeight: "400",
+        lineHeight: 19,
+        letterSpacing: -0.408,
+        color: "#4F5A6A",
+    },
+    /** Frame 20: Check-in button - opacity 0.5 when disabled */
+    checkInButton: {
+        height: 56,
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        backgroundColor: "#4941F6",
+        borderRadius: 8,
+    },
+    checkInButtonText: {
+        fontSize: 20,
+        fontWeight: "400",
+        lineHeight: 24,
+        letterSpacing: -0.408,
+        color: "#FFFFFF",
+    },
+    checkInHint: {
+        fontSize: 16,
+        fontWeight: "400",
+        lineHeight: 19,
+        letterSpacing: -0.408,
+        color: "#000000",
+        textAlign: "center",
+    },
+    activityTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        lineHeight: 24,
+        letterSpacing: -0.408,
+        color: "#000000",
+    },
+    activityList: {
+        gap: 10,
+    },
+    activityItem: {
+        gap: 10,
+    },
+    activityItemRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 16,
+    },
+    activityBy: {
+        fontSize: 16,
+        fontWeight: "400",
+        lineHeight: 19,
+        letterSpacing: -0.408,
+        color: "#000000",
+    },
+    divider: {
+        height: 1,
+        backgroundColor: "#E4E4E4",
     },
     emptyText: {
-        fontSize: 15,
-        color: "#686D84",
+        fontSize: 16,
+        fontWeight: "400",
+        color: "#4F5A6A",
         fontStyle: "italic",
     },
     loading: {
@@ -169,44 +151,33 @@ const styles = StyleSheet.create({
     },
 });
 
-function PreviousCheckInRow({ checkIn }: { checkIn: ApiCheckinWithUser }) {
-    const displayName = checkIn.userName?.trim() || "Someone";
-    return (
-        <View style={styles.previousRow}>
-            <Text style={styles.previousName}>{displayName}</Text>
-            <Text style={styles.previousTime}>{formatCheckinTime(checkIn.createdAt)}</Text>
-        </View>
-    );
-}
-
-function LastUpdateCard({ court }: { court: ApiCourt }) {
-    const statusKey = apiStatusToApp(court.status);
+function RecentActivityItem({
+    checkIn,
+    showDivider,
+}: {
+    checkIn: ApiCheckinWithUser;
+    showDivider: boolean;
+}) {
+    const statusKey = apiStatusToApp(checkIn.status);
     const { bg, text } = COURT_STATUS[statusKey];
+    const name = checkIn.userName?.trim() || "Someone";
 
     return (
-        <Card>
-            <View style={styles.lastCard}>
-                {court.photoUrl ? (
-                    <Image
-                        source={{ uri: court.photoUrl }}
-                        style={styles.courtPhoto}
-                        resizeMode="cover"
-                    />
-                ) : (
-                    <View style={[styles.courtPhoto, { backgroundColor: "#E8E8E8" }]} />
-                )}
-                <View style={styles.lastMeta}>
-                    <View style={[styles.lastCrowd, { backgroundColor: bg }]}>
-                        <Text style={[styles.lastCrowdText, { color: text }]}>
-                            {statusKey.charAt(0).toUpperCase() + statusKey.slice(1)}
-                        </Text>
-                    </View>
-                    <Text style={styles.lastTime}>
-                        Updated {formatLastUpdated(court.lastUpdatedAt)}
+        <View style={styles.activityItem}>
+            <View style={styles.activityItemRow}>
+                <View style={[styles.pill, { backgroundColor: bg }]}>
+                    <Text style={[styles.pillText, { color: text }]}>
+                        {statusKey.charAt(0).toUpperCase() + statusKey.slice(1)}
                     </Text>
                 </View>
+                <View style={styles.timeRow}>
+                    <Ionicons name="time-outline" size={16} color="#4F5A6A" />
+                    <Text style={styles.timeText}>{formatTimePast(checkIn.createdAt)}</Text>
+                </View>
             </View>
-        </Card>
+            <Text style={styles.activityBy}>by {name}</Text>
+            {showDivider && <View style={styles.divider} />}
+        </View>
     );
 }
 
@@ -246,7 +217,6 @@ export default function CourtDetailScreen() {
         loadCourt();
     }, [loadCourt]);
 
-    // Merge check-in we just added (name + time) so it shows even before the list API returns it
     useEffect(() => {
         const added = parseAddedCheckin(addedCheckinParam);
         if (!added || loading) return;
@@ -264,9 +234,12 @@ export default function CourtDetailScreen() {
     if (!id) {
         return (
             <MainScreenLayout>
-                <View style={styles.header}>
-                    <BackButton onPress={() => router.back()} />
-                    <Text style={styles.headerTitle}>Invalid court</Text>
+                <View style={styles.screen}>
+                    <MainHeader
+                        left={<BackButton onPress={() => router.back()} />}
+                        title="Invalid court"
+                        right={<View />}
+                    />
                 </View>
             </MainScreenLayout>
         );
@@ -275,12 +248,15 @@ export default function CourtDetailScreen() {
     if (loading) {
         return (
             <MainScreenLayout>
-                <View style={styles.header}>
-                    <BackButton onPress={() => router.back()} />
-                    <Text style={styles.headerTitle}>Court</Text>
-                </View>
-                <View style={styles.loading}>
-                    <ActivityIndicator size="large" color={APP_COLORS.primary} />
+                <View style={styles.screen}>
+                    <MainHeader
+                        left={<BackButton onPress={() => router.back()} />}
+                        title="Court"
+                        right={<View />}
+                    />
+                    <View style={styles.loading}>
+                        <ActivityIndicator size="large" color={APP_COLORS.primary} />
+                    </View>
                 </View>
             </MainScreenLayout>
         );
@@ -289,63 +265,94 @@ export default function CourtDetailScreen() {
     if (error || !court) {
         return (
             <MainScreenLayout>
-                <View style={styles.header}>
-                    <BackButton onPress={() => router.back()} />
-                    <Text style={styles.headerTitle}>
-                        {error ?? "Court not found"}
-                    </Text>
+                <View style={styles.screen}>
+                    <MainHeader
+                        left={<BackButton onPress={() => router.back()} />}
+                        title={error ?? "Court not found"}
+                        right={<View />}
+                    />
                 </View>
             </MainScreenLayout>
         );
     }
 
+    const statusKey = apiStatusToApp(court.status);
+    const { bg, text } = COURT_STATUS[statusKey];
+
     return (
         <MainScreenLayout>
-            <View style={styles.header}>
-                <BackButton onPress={() => router.back()} />
-                <Text style={styles.headerTitle} numberOfLines={1}>
-                    {court.name}
-                </Text>
-            </View>
-            <ScrollView
-                style={styles.content}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                <View>
-                    <Text style={styles.sectionTitle}>Last update</Text>
-                    <LastUpdateCard court={court} />
-                </View>
-
-                <View>
-                    <Text style={styles.sectionTitle}>Previous check-ins</Text>
-                    {checkins.length > 0 ? (
-                        <View style={styles.previousList}>
-                            {checkins.map((c) => (
-                                <PreviousCheckInRow key={c.checkinId} checkIn={c} />
-                            ))}
+            <View style={styles.screen}>
+                <MainHeader
+                    left={<BackButton onPress={() => router.back()} />}
+                    title={court.name}
+                    right={<View />}
+                />
+                <ScrollView
+                    style={styles.scroll}
+                    contentContainerStyle={SCROLL_CONTENT}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <SectionCard style={INFO_CARD_STYLE}>
+                        {court.photoUrl ? (
+                            <Image
+                                source={{ uri: court.photoUrl }}
+                                style={styles.courtPhoto}
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <View style={styles.courtPhoto} />
+                        )}
+                        <View style={styles.statusRow}>
+                            <View style={[styles.pill, { backgroundColor: bg }]}>
+                                <Text style={[styles.pillText, { color: text }]}>
+                                    {statusKey.charAt(0).toUpperCase() + statusKey.slice(1)}
+                                </Text>
+                            </View>
+                            <View style={styles.timeRow}>
+                                <Ionicons name="time-outline" size={16} color="#4F5A6A" />
+                                <Text style={styles.timeText}>
+                                    {formatTimePast(court.lastUpdatedAt)}
+                                </Text>
+                            </View>
                         </View>
-                    ) : (
-                        <Card>
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.checkInButton,
+                                { opacity: 0.5 },
+                                pressed && { opacity: 0.6 },
+                            ]}
+                            onPress={() =>
+                                router.push(`/(main)/court/${court.id}/check-in`)
+                            }
+                        >
+                            <Text style={styles.checkInButtonText}>Check-in</Text>
+                        </Pressable>
+                        <Text style={styles.checkInHint}>
+                            Check-in will be enabled once you are nearby and have location turned
+                            on.
+                        </Text>
+                    </SectionCard>
+
+                    <SectionCard>
+                        <Text style={styles.activityTitle}>Recent Activity</Text>
+                        {checkins.length > 0 ? (
+                            <View style={styles.activityList}>
+                                {checkins.map((c, i) => (
+                                    <RecentActivityItem
+                                        key={c.checkinId}
+                                        checkIn={c}
+                                        showDivider={i < checkins.length - 1}
+                                    />
+                                ))}
+                            </View>
+                        ) : (
                             <Text style={styles.emptyText}>
                                 No check-ins yet. Be the first!
                             </Text>
-                        </Card>
-                    )}
-                </View>
-
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.checkInButton,
-                        { opacity: pressed ? 0.9 : 1 },
-                    ]}
-                    onPress={() =>
-                        router.push(`/(main)/court/${court.id}/check-in`)
-                    }
-                >
-                    <Text style={styles.checkInButtonText}>Check in</Text>
-                </Pressable>
-            </ScrollView>
+                        )}
+                    </SectionCard>
+                </ScrollView>
+            </View>
         </MainScreenLayout>
     );
 }

@@ -1,13 +1,18 @@
 import {
     APP_COLORS,
     CourtCard,
+    HeaderLogo,
     HomePromoCard,
-    MAIN_SPACING,
+    MainHeader,
     MainScreenLayout,
+    SectionCard,
+    SCROLL_CONTENT,
 } from "@/components/ui/main";
+import { MAIN_RADII, SECTION_BACKGROUND } from "@/components/ui/main/theme";
 import { useAuthContext } from "@/context/AuthContext";
 import type { ApiCourt } from "@/lib/courts";
 import { apiStatusToApp, listCourts } from "@/lib/courts";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -21,66 +26,49 @@ import {
 } from "react-native";
 
 const styles = StyleSheet.create({
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: MAIN_SPACING.headerPaddingHorizontal,
-        paddingVertical: MAIN_SPACING.headerPaddingVertical,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: "#E0E0E0",
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: APP_COLORS.title,
-    },
-    devLogout: {
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-    },
-    devLogoutText: {
-        fontSize: 14,
-        color: APP_COLORS.primary,
-    },
-    content: {
+    screen: {
         flex: 1,
-        paddingHorizontal: MAIN_SPACING.contentPaddingHorizontal,
-        paddingBottom: MAIN_SPACING.contentPaddingBottom,
+        backgroundColor: SECTION_BACKGROUND,
     },
-    scrollContent: {
-        paddingTop: MAIN_SPACING.sectionGap,
-        paddingBottom: MAIN_SPACING.contentPaddingBottom,
-        gap: MAIN_SPACING.sectionGap,
+    headerRight: {
+        padding: 8,
+    },
+    scroll: {
+        flex: 1,
+    },
+    courtsSection: {
+        alignSelf: "stretch",
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: APP_COLORS.title,
-        marginBottom: 8,
+        fontSize: 20,
+        fontWeight: "700",
+        lineHeight: 24,
+        letterSpacing: -0.408,
+        color: "#000000",
     },
     list: {
-        gap: MAIN_SPACING.listGap,
+        gap: 10,
     },
     loading: {
-        paddingVertical: 32,
+        paddingVertical: 40,
         alignItems: "center",
     },
     error: {
         padding: 16,
-        backgroundColor: "#FFE0E0",
-        borderRadius: 8,
+        backgroundColor: "#FFE8E8",
+        borderRadius: MAIN_RADII.card,
         marginBottom: 8,
     },
     errorText: {
         fontSize: 14,
         color: "#A90000",
+        fontWeight: "500",
     },
 });
 
 export default function Main() {
-    const { logout } = useAuthContext();
     const router = useRouter();
+    const { user, getCurrentUser } = useAuthContext();
     const [courts, setCourts] = useState<ApiCourt[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -103,64 +91,61 @@ export default function Main() {
     useFocusEffect(
         useCallback(() => {
             loadCourts(courts.length === 0);
-        }, [loadCourts, courts.length])
+            getCurrentUser();
+        }, [loadCourts, courts.length, getCurrentUser])
     );
-
-    const handleLogout = async () => {
-        try {
-            await logout();
-            router.replace("/(auth)");
-        } catch (err) {
-            console.error("Logout failed:", err);
-        }
-    };
 
     return (
         <MainScreenLayout>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>CourtCheck</Text>
-                {__DEV__ && (
-                    <Pressable
-                        onPress={handleLogout}
-                        style={styles.devLogout}
-                        hitSlop={8}
-                    >
-                        <Text style={styles.devLogoutText}>Log out</Text>
-                    </Pressable>
-                )}
+            <View style={styles.screen}>
+                <MainHeader
+                    left={<HeaderLogo />}
+                    right={
+                        <Pressable
+                            onPress={() => router.push("/(main)/menu")}
+                            style={styles.headerRight}
+                            hitSlop={8}
+                        >
+                            <Ionicons name="menu" size={24} color="#000000" />
+                        </Pressable>
+                    }
+                />
+                <ScrollView
+                    style={styles.scroll}
+                    contentContainerStyle={SCROLL_CONTENT}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <HomePromoCard checkinCount={user?.checkinCount} />
+                    <SectionCard>
+                        <View style={styles.courtsSection}>
+                            <Text style={styles.sectionTitle}>Available Courts</Text>
+                            {error ? (
+                                <View style={styles.error}>
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                            ) : null}
+                            {loading ? (
+                                <View style={styles.loading}>
+                                    <ActivityIndicator size="large" color={APP_COLORS.primary} />
+                                </View>
+                            ) : (
+                                <View style={styles.list}>
+                                    {courts.map((court) => (
+                                        <CourtCard
+                                            key={court.id}
+                                            name={court.name}
+                                            status={apiStatusToApp(court.status)}
+                                            onPress={() => router.push(`/(main)/court/${court.id}`)}
+                                            addressLine={court.addressLine}
+                                            lastUpdatedAt={court.lastUpdatedAt}
+                                        />
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    </SectionCard>
+                </ScrollView>
             </View>
-            <ScrollView
-                style={styles.content}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                <HomePromoCard />
-
-                <View>
-                    <Text style={styles.sectionTitle}>Courts nearby</Text>
-                    {error && (
-                        <View style={styles.error}>
-                            <Text style={styles.errorText}>{error}</Text>
-                        </View>
-                    )}
-                    {loading ? (
-                        <View style={styles.loading}>
-                            <ActivityIndicator size="large" color={APP_COLORS.primary} />
-                        </View>
-                    ) : (
-                        <View style={styles.list}>
-                            {courts.map((court) => (
-                                <CourtCard
-                                    key={court.id}
-                                    name={court.name}
-                                    status={apiStatusToApp(court.status)}
-                                    onPress={() => router.push(`/(main)/court/${court.id}`)}
-                                />
-                            ))}
-                        </View>
-                    )}
-                </View>
-            </ScrollView>
         </MainScreenLayout>
     );
 }
