@@ -14,79 +14,86 @@ import type { ApiCourt } from "@/lib/courts";
 import { apiStatusToApp, listCourts } from "@/lib/courts";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: SECTION_BACKGROUND,
-    },
-    headerRight: {
-        padding: 8,
-    },
-    scroll: {
-        flex: 1,
-    },
-    courtsSection: {
-        alignSelf: "stretch",
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        lineHeight: 24,
-        letterSpacing: -0.408,
-        color: "#000000",
-    },
-    list: {
-        gap: 10,
-    },
-    loading: {
-        paddingVertical: 40,
-        alignItems: "center",
-    },
-    error: {
-        padding: 16,
-        backgroundColor: "#FFE8E8",
-        borderRadius: MAIN_RADII.card,
-        marginBottom: 8,
-    },
-    errorText: {
-        fontSize: 14,
-        color: "#A90000",
-        fontWeight: "500",
-    },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: MAIN_SPACING.headerPaddingHorizontal,
+    paddingVertical: MAIN_SPACING.headerPaddingVertical,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E0E0E0",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: APP_COLORS.title,
+  },
+  devLogout: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  devLogoutText: {
+    fontSize: 14,
+    color: APP_COLORS.primary,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: MAIN_SPACING.contentPaddingHorizontal,
+    paddingBottom: MAIN_SPACING.contentPaddingBottom,
+  },
+  scrollContent: {
+    paddingTop: MAIN_SPACING.sectionGap,
+    paddingBottom: MAIN_SPACING.contentPaddingBottom,
+    gap: MAIN_SPACING.sectionGap,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: APP_COLORS.title,
+    marginBottom: 8,
+  },
+  list: {
+    gap: MAIN_SPACING.listGap,
+  },
+  loading: {
+    paddingVertical: 32,
+    alignItems: "center",
+  },
+  error: {
+    padding: 16,
+    backgroundColor: "#FFE0E0",
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#A90000",
+  },
 });
 
 export default function Main() {
-    const router = useRouter();
-    const { user, getCurrentUser } = useAuthContext();
-    const [courts, setCourts] = useState<ApiCourt[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const { logout } = useAuthContext();
+  const router = useRouter();
+  const [courts, setCourts] = useState<ApiCourt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const loadCourts = useCallback(async (showLoading = true) => {
-        if (showLoading) {
-            setLoading(true);
-            setError(null);
-        }
-        try {
-            const list = await listCourts();
-            setCourts(list);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Failed to load courts");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+  const getUserCoordinates = useCallback(async () => {
+    if (Platform.OS === "web") return undefined;
 
     useFocusEffect(
         useCallback(() => {

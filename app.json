@@ -44,6 +44,12 @@
         {
           "merchantIdentifier": "merchant.com.courtcheck"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CourtCheck uses your location to help with accurate court check-ins and list the courts near you."
+        }
       ]
     ],
     "experiments": {
