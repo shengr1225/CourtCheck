@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api";
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useState } from "react";
 
 type User = {
   userId: string;
@@ -8,12 +8,14 @@ type User = {
   stripeCustomerId?: string | null;
 };
 
+type NextAuthStep = "name" | "main";
+
 type AuthContextType = {
   user: User | null;
   loading: boolean;
   requestOtp: (email: string) => Promise<void>;
-  verifyOtp: (email: string, code: string) => Promise<"name" | "main">;
-  getCurrentUser: () => Promise<void>;
+  verifyOtp: (email: string, code: string) => Promise<NextAuthStep>;
+  getCurrentUser: () => Promise<User | null>;
   logout: () => Promise<void>;
 };
 
@@ -24,17 +26,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // Auth API Calls
-  async function requestOtp(email: string) {
+  const requestOtp = useCallback(async (email: string) => {
     await apiFetch("/api/auth/request", {
       method: "POST",
       body: JSON.stringify({ email }),
     });
-  }
+  }, []);
 
-  async function verifyOtp(
-    email: string,
-    code: string
-  ): Promise<"name" | "main"> {
+  async function verifyOtp(email: string, code: string): Promise<NextAuthStep> {
     const data = await apiFetch("/api/auth/verify", {
       method: "POST",
       body: JSON.stringify({ email, code }),
@@ -49,23 +48,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function getCurrentUser() {
+  const getCurrentUser = useCallback(async (): Promise<User | null> => {
     try {
       const data = await apiFetch("/api/auth/me");
       setUser(data.user);
+      return data.user ?? null;
     } catch {
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function logout() {
+  const logout = useCallback(async () => {
     await apiFetch("/api/auth/logout", {
       method: "POST",
     });
     setUser(null);
-  }
+  }, []);
 
   return (
     <AuthContext.Provider

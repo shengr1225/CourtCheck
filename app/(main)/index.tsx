@@ -5,9 +5,9 @@ import {
   MAIN_SPACING,
   MainScreenLayout,
 } from "@/components/ui/main";
-import { useAuthContext } from "@/context/AuthContext";
 import type { ApiCourt } from "@/lib/courts";
 import { apiStatusToApp, listCourts } from "@/lib/courts";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
@@ -37,13 +37,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: APP_COLORS.title,
   },
-  devLogout: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  devLogoutText: {
-    fontSize: 14,
-    color: APP_COLORS.primary,
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     flex: 1,
@@ -81,7 +80,6 @@ const styles = StyleSheet.create({
 });
 
 export default function Main() {
-  const { logout } = useAuthContext();
   const router = useRouter();
   const [courts, setCourts] = useState<ApiCourt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,28 +137,19 @@ export default function Main() {
     }, [loadCourts, courts.length])
   );
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.replace("/(auth)");
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
-  };
-
   return (
     <MainScreenLayout>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>CourtCheck</Text>
-        {__DEV__ && (
-          <Pressable
-            onPress={handleLogout}
-            style={styles.devLogout}
-            hitSlop={8}
-          >
-            <Text style={styles.devLogoutText}>Log out</Text>
-          </Pressable>
-        )}
+        <Pressable
+          onPress={() => router.push("/(main)/menu")}
+          style={styles.menuButton}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Open menu"
+        >
+          <MaterialCommunityIcons name="menu" size={32} color="#000000" />
+        </Pressable>
       </View>
       <ScrollView
         style={styles.content}
