@@ -20,31 +20,25 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    // Auth API Calls
-    async function requestOtp(email: string) {
-        await apiFetch("/api/auth/request", {
-            method: "POST",
-            body: JSON.stringify({ email }),
-        });
-    }
+  // Auth API Calls
+  async function requestOtp(email: string) {
+    await apiFetch("/api/auth/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
 
-    async function verifyOtp(email: string, code: string): Promise<"name" | "main"> {
-        const data = await apiFetch("/api/auth/verify", {
-            method: "POST",
-            body: JSON.stringify({ email, code }),
-        });
-
-        if (data.ok && data.user) {
-            setUser(data.user);
-            // Decide next step based on whether user has a name
-            return data.user.name ? "main" : "name";
-        } else {
-            throw new Error(data.error || "Verification failed");
-        }
-    }
+  async function verifyOtp(
+    email: string,
+    code: string
+  ): Promise<"name" | "main"> {
+    const data = await apiFetch("/api/auth/verify", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
 
     if (data.ok && data.user) {
       setUser(data.user);
