@@ -1,19 +1,22 @@
-const API_BASE = "https://court-check-server.vercel.app";
+const FALLBACK_API_BASE = "https://court-check-server.vercel.app";
+const API_BASE = (
+  process.env.EXPO_PUBLIC_API_BASE_URL || FALLBACK_API_BASE
+).replace(/\/+$/, "");
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-    const res = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...(options.headers || {}),
-        },
-        credentials: "include",
-    });
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    credentials: "include",
+  });
 
-    if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: "Network error" }));
-        throw new Error(error.error || "Request failed");
-    }
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: "Network error" }));
+    throw new Error(error.error || "Request failed");
+  }
 
-    return res.json();
+  return res.json();
 }
