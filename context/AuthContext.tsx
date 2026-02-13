@@ -2,18 +2,19 @@ import { apiFetch } from "@/lib/api";
 import React, { createContext, useContext, useState } from "react";
 
 type User = {
-    userId: string;
-    email: string;
-    name?: string;
+  userId: string;
+  email: string;
+  name?: string;
+  stripeCustomerId?: string | null;
 };
 
 type AuthContextType = {
-    user: User | null;
-    loading: boolean;
-    requestOtp: (email: string) => Promise<void>;
-    verifyOtp: (email: string, code: string) => Promise<"name" | "main">;
-    getCurrentUser: () => Promise<void>;
-    logout: () => Promise<void>;
+  user: User | null;
+  loading: boolean;
+  requestOtp: (email: string) => Promise<void>;
+  verifyOtp: (email: string, code: string) => Promise<"name" | "main">;
+  getCurrentUser: () => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -45,35 +46,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
-    async function getCurrentUser() {
-        try {
-            const data = await apiFetch("/api/auth/me");
-            setUser(data.user);
-        } catch {
-            setUser(null);
-        } finally {
-            setLoading(false);
-        }
+    if (data.ok && data.user) {
+      setUser(data.user);
+      // Decide next step based on whether user has a name
+      return data.user.name ? "main" : "name";
+    } else {
+      throw new Error(data.error || "Verification failed");
     }
+  }
 
-    async function logout() {
-        await apiFetch("/api/auth/logout", {
-            method: "POST",
-        });
-        setUser(null);
+  async function getCurrentUser() {
+    try {
+      const data = await apiFetch("/api/auth/me");
+      setUser(data.user);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    return (
-        <AuthContext.Provider
-            value={{ user, loading, requestOtp, verifyOtp, getCurrentUser, logout }}
-        >
-            {children}
-        </AuthContext.Provider>
-    );
+  async function logout() {
+    await apiFetch("/api/auth/logout", {
+      method: "POST",
+    });
+    setUser(null);
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{ user, loading, requestOtp, verifyOtp, getCurrentUser, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuthContext() {
-    const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error("AuthContext missing");
-    return ctx;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("AuthContext missing");
+  return ctx;
 }
